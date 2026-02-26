@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* ─── Admin Design Tokens ─── */
+@theme inline {
+  --color-admin-bg: #f8f7f4;
+  --color-admin-panel: #ffffff;
+  --color-admin-sidebar: #1a1a18;
+  --color-admin-sidebar-text: #a0a098;
+  --color-admin-sidebar-hover: #d0cfc8;
+  --color-admin-sidebar-active: #ffffff;
+  --color-admin-accent: #c9a96e;
+  --color-admin-border: rgba(0, 0, 0, 0.07);
+  --color-admin-text: #1a1a18;
+  --color-admin-text-secondary: #8a8a82;
+  --color-admin-status-green: #4a7c59;
+  --color-admin-status-red: #c0392b;
+  --color-admin-status-amber: #c9a96e;
+  --color-admin-row-hover: #fafaf8;
+  --color-admin-row-selected: #f5f3ef;
+}
+
+/* ─── Admin Base ─── */
+.admin-body {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1a1a18;
+  background-color: #f8f7f4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Admin Scrollbar ─── */
+.admin-body ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.admin-body ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-body ::-webkit-scrollbar-thumb {
+  background: #d0cfc8;
+  border-radius: 3px;
+}
+.admin-body ::-webkit-scrollbar-thumb:hover {
+  background: #a0a098;
+}
+
+/* ─── Admin Selection ─── */
+.admin-body ::selection {
+  background-color: #c9a96e;
+  color: #ffffff;
+}
+
+/* ─── Sidebar scrollbar ─── */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0;
+}
+.sidebar-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
