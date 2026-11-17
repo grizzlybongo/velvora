@@ -10,7 +10,9 @@
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "db:status": "prisma migrate status"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.2.11",

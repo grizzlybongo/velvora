@@ -25,6 +25,9 @@
 - **2026-02-26** — Fixed Prisma v7 runtime initialization. Installed `@prisma/adapter-pg` and updated `lib/prisma.ts` + `prisma/seed.ts` to construct `PrismaClient` with a `PrismaPg` driver adapter (required by Prisma v7 — bare `new PrismaClient()` no longer works). Seed script also loads `dotenv/config` for `DATABASE_URL`.
   - Files: `lib/prisma.ts`, `prisma/seed.ts`, `package.json`, `PROGRESS.md`
 
+- **2026-11-17** — Aligned Prisma v7 config (`prisma.config.ts`) to use `env("DATABASE_URL")` from `"prisma/config"`, updated `.gitignore` to track `.env.example` while keeping `.env*` ignored, simplified `.env.example`, and added `db:seed` and `db:status` npm scripts. Verified local PostgreSQL connection via `prisma migrate status`, TypeScript check, and production build.
+  - Files: `.gitignore`, `.env.example`, `prisma.config.ts`, `package.json`, `PROGRESS.md`
+
 ---
 
 ## 🔄 In progress
