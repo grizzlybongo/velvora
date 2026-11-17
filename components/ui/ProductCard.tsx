@@ -4,14 +4,16 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { fadeUp } from '@/lib/utils'
-import type { Product } from '@/lib/data/products'
+import type { StorefrontProduct } from '@/lib/db/types'
 
 interface ProductCardProps {
-  product: Product
+  product: StorefrontProduct
   index?: number
 }
 
 export default function ProductCard({ product, index = 0 }: ProductCardProps) {
+  const heroImage = product.images[0]
+
   return (
     <motion.article
       variants={fadeUp}
@@ -24,14 +26,11 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     >
       <Link href={`/products/${product.slug}`} className="block">
         {/* Image container */}
-        <div
-          className="relative mb-5 aspect-3/4 overflow-hidden"
-          style={{ backgroundColor: product.cardColor }}
-        >
-          {product.image ? (
+        <div className="relative mb-5 aspect-3/4 overflow-hidden bg-[#f4f2ee]">
+          {heroImage ? (
             <Image
-              src={product.image}
-              alt={product.name}
+              src={heroImage.url}
+              alt={heroImage.alt || product.name}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-700 ease-luxury group-hover:scale-105"
@@ -40,7 +39,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             <div className="absolute inset-0 flex items-center justify-center">
               <span
                 className="font-body text-[10px] font-light uppercase"
-                style={{ letterSpacing: '0.2em', color: product.textColor, opacity: 0.5 }}
+                style={{ letterSpacing: '0.2em', color: '#8a8a82', opacity: 0.5 }}
               >
                 {product.name}
               </span>
@@ -58,16 +57,16 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Info — no price */}
+        {/* Info */}
         <div className="space-y-1.5">
           <p className="font-body text-[10px] font-light tracking-label text-muted uppercase">
-            {product.family}
+            {product.currency}
           </p>
           <h3 className="font-display text-xl font-light tracking-wide text-ink">
             {product.name}
           </h3>
-          <p className="font-body text-sm font-extralight text-muted">
-            {product.tagline}
+          <p className="font-body text-sm font-extralight text-muted line-clamp-1">
+            {product.description}
           </p>
         </div>
       </Link>
