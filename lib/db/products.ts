@@ -1,101 +1,132 @@
+// PUBLIC read layer. ACTIVE/visible only. Admin queries go in lib/db/admin/* (later), never here.
+
+import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
-import type { StorefrontProduct } from "./types";
+import type { StorefrontProduct, StorefrontVariant } from "./types";
+
+export const publicProductSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  tagline: true,
+  family: true,
+  scentNotes: true,
+  description: true,
+  price: true,
+  cardColor: true,
+  textColor: true,
+  images: {
+    orderBy: { sortOrder: "asc" as const },
+    select: {
+      url: true,
+      alt: true,
+    },
+  },
+  variants: {
+    orderBy: { sortOrder: "asc" as const },
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      compareAt: true,
+      inventory: true,
+      threshold: true,
+    },
+  },
+} satisfies Prisma.ProductSelect;
+
+export type SelectedPublicProduct = Prisma.ProductGetPayload<{
+  select: typeof publicProductSelect;
+}>;
+
+export function mapStorefrontProduct(
+  p: SelectedPublicProduct
+): StorefrontProduct {
+  const variants: StorefrontVariant[] = p.variants.map((v) => ({
+    id: v.id,
+    name: v.name,
+    price: v.price.toString(),
+    compareAt: v.compareAt !== null ? v.compareAt.toString() : null,
+    inStock: v.inventory > 0,
+    lowStock: v.inventory > 0 && v.inventory <= v.threshold,
+  }));
+
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    tagline: p.tagline,
+    family: p.family,
+    scentNotes: p.scentNotes,
+    description: p.description,
+    price: p.price.toString(),
+    cardColor: p.cardColor,
+    textColor: p.textColor,
+    images: p.images.map((img) => ({
+      url: img.url,
+      alt: img.alt,
+    })),
+    variants,
+    inStock: variants.some((v) => v.inStock),
+  };
+}
 
 /**
- * Get all ACTIVE products, optionally filtered.
- * Returns [] if DB is unavailable.
+ * Get ACTIVE products, optionally filtered by featured flag, visible collection slug, and limit.
  */
 export async function getProducts(opts?: {
   featured?: boolean;
   collectionSlug?: string;
+  limit?: number;
 }): Promise<StorefrontProduct[]> {
-  try {
-    const prisma = getPrisma();
+  const prisma = getPrisma();
 
-    const where: Record<string, unknown> = { status: "ACTIVE" };
+  const where: Prisma.ProductWhereInput = {
+    status: "ACTIVE",
+  };
 
-    if (opts?.featured) where.featured = true;
-    if (opts?.collectionSlug) {
-      where.collections = {
-        some: { collection: { slug: opts.collectionSlug } },
-      };
-    }
-
-    const rows = await prisma.product.findMany({
-      where,
-      include: {
-        images: { orderBy: { sortOrder: "asc" } },
-        variants: { orderBy: { price: "asc" } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      description: p.description,
-      price: p.price.toString(),
-      compareAt: p.compareAt?.toString() ?? null,
-      currency: p.currency,
-      featured: p.featured,
-      images: p.images.map((img) => ({ url: img.url, alt: img.alt })),
-      variants: p.variants.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        name: v.name,
-        price: v.price.toString(),
-        inventory: v.inventory,
-      })),
-      createdAt: p.createdAt.toISOString(),
-    }));
-  } catch (e) {
-    console.error("[getProducts]", e);
-    return [];
+  if (opts?.featured !== undefined) {
+    where.featured = opts.featured;
   }
+
+  if (opts?.collectionSlug) {
+    where.collections = {
+      some: {
+        collection: {
+          slug: opts.collectionSlug,
+          visible: true,
+        },
+      },
+    };
+  }
+
+  const rows = await prisma.product.findMany({
+    where,
+    select: publicProductSelect,
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    ...(opts?.limit !== undefined ? { take: opts.limit } : {}),
+  });
+
+  return rows.map(mapStorefrontProduct);
 }
 
 /**
  * Get a single ACTIVE product by slug.
- * Returns null if DB is unavailable.
  */
 export async function getProductBySlug(
   slug: string
 ): Promise<StorefrontProduct | null> {
-  try {
-    const prisma = getPrisma();
+  const prisma = getPrisma();
 
-    const p = await prisma.product.findUnique({
-      where: { slug },
-      include: {
-        images: { orderBy: { sortOrder: "asc" } },
-        variants: { orderBy: { price: "asc" } },
-      },
-    });
+  const row = await prisma.product.findFirst({
+    where: {
+      slug,
+      status: "ACTIVE",
+    },
+    select: publicProductSelect,
+  });
 
-    if (!p || p.status !== "ACTIVE") return null;
+  if (!row) return null;
 
-    return {
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      description: p.description,
-      price: p.price.toString(),
-      compareAt: p.compareAt?.toString() ?? null,
-      currency: p.currency,
-      featured: p.featured,
-      images: p.images.map((img) => ({ url: img.url, alt: img.alt })),
-      variants: p.variants.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        name: v.name,
-        price: v.price.toString(),
-        inventory: v.inventory,
-      })),
-      createdAt: p.createdAt.toISOString(),
-    };
-  } catch (e) {
-    console.error("[getProductBySlug]", e);
-    return null;
-  }
+  return mapStorefrontProduct(row);
 }

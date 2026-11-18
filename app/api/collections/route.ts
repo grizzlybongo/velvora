@@ -1,42 +1,26 @@
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { getCollections } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+const SUCCESS_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+};
 
 /**
  * GET /api/collections
  *
- * Returns all collections with product count.
+ * Returns all visible collections with their ACTIVE product count.
  */
 export async function GET() {
   try {
-    const prisma = getPrisma();
-
-    const collections = await prisma.collection.findMany({
-      include: {
-        _count: {
-          select: { products: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const result = collections.map((c) => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      description: c.description,
-      imageUrl: c.imageUrl,
-      productCount: c._count.products,
-      createdAt: c.createdAt.toISOString(),
-    }));
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("[GET /api/collections]", error);
+    const collections = await getCollections();
+    return NextResponse.json(collections, { headers: SUCCESS_HEADERS });
+  } catch (err) {
+    console.error("[api] /api/collections failed", err);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: "Internal error" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }

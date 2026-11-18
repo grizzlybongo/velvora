@@ -1,100 +1,167 @@
+// PUBLIC read layer. ACTIVE/visible only. Admin queries go in lib/db/admin/* (later), never here.
+
+import type { Prisma } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
+import { mapStorefrontProduct, publicProductSelect } from "./products";
 import type {
   StorefrontCollection,
   StorefrontCollectionWithProducts,
 } from "./types";
 
+const homepageProductSelect = {
+  ...publicProductSelect,
+  images: {
+    orderBy: { sortOrder: "asc" as const },
+    take: 1,
+    select: {
+      url: true,
+      alt: true,
+    },
+  },
+} satisfies Prisma.ProductSelect;
+
 /**
- * Get all collections with product count.
- * Returns [] if DB is unavailable.
+ * Get all visible collections with ACTIVE product count.
  */
 export async function getCollections(): Promise<StorefrontCollection[]> {
-  try {
-    const prisma = getPrisma();
+  const prisma = getPrisma();
 
-    const rows = await prisma.collection.findMany({
-      include: { _count: { select: { products: true } } },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((c) => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      description: c.description,
-      imageUrl: c.imageUrl,
-      productCount: c._count.products,
-      createdAt: c.createdAt.toISOString(),
-    }));
-  } catch (e) {
-    console.error("[getCollections]", e);
-    return [];
-  }
-}
-
-/**
- * Get a single collection by slug with its ordered ACTIVE products.
- * Returns null if DB is unavailable.
- */
-export async function getCollectionBySlug(
-  slug: string
-): Promise<StorefrontCollectionWithProducts | null> {
-  try {
-    const prisma = getPrisma();
-
-    const row = await prisma.collection.findUnique({
-      where: { slug },
-      include: {
-        products: {
-          orderBy: { sortOrder: "asc" },
-          include: {
-            product: {
-              include: {
-                images: { orderBy: { sortOrder: "asc" } },
-                variants: { orderBy: { price: "asc" } },
-              },
+  const rows = await prisma.collection.findMany({
+    where: { visible: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      imageUrl: true,
+      metaTitle: true,
+      metaDescription: true,
+      _count: {
+        select: {
+          products: {
+            where: {
+              product: { status: "ACTIVE" },
             },
           },
         },
       },
-    });
+    },
+  });
 
-    if (!row) return null;
+  return rows.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    imageUrl: c.imageUrl,
+    metaTitle: c.metaTitle,
+    metaDescription: c.metaDescription,
+    productCount: c._count.products,
+  }));
+}
 
+/**
+ * Get a single visible collection by slug with its ordered ACTIVE products.
+ */
+export async function getCollectionBySlug(
+  slug: string
+): Promise<StorefrontCollectionWithProducts | null> {
+  const prisma = getPrisma();
+
+  const row = await prisma.collection.findFirst({
+    where: {
+      slug,
+      visible: true,
+    },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      imageUrl: true,
+      metaTitle: true,
+      metaDescription: true,
+      products: {
+        where: {
+          product: { status: "ACTIVE" },
+        },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          product: {
+            select: publicProductSelect,
+          },
+        },
+      },
+    },
+  });
+
+  if (!row) return null;
+
+  const products = row.products.map((cp) => mapStorefrontProduct(cp.product));
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    imageUrl: row.imageUrl,
+    metaTitle: row.metaTitle,
+    metaDescription: row.metaDescription,
+    productCount: products.length,
+    products,
+  };
+}
+
+/**
+ * Get visible homepage-featured collections and their ACTIVE products in ONE query.
+ * Each product selects only its first image (take: 1) and variants ordered by sortOrder.
+ */
+export async function getHomepageCollections(): Promise<
+  StorefrontCollectionWithProducts[]
+> {
+  const prisma = getPrisma();
+
+  const rows = await prisma.collection.findMany({
+    where: {
+      visible: true,
+      featuredOnHomepage: true,
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      imageUrl: true,
+      metaTitle: true,
+      metaDescription: true,
+      products: {
+        where: {
+          product: { status: "ACTIVE" },
+        },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          product: {
+            select: homepageProductSelect,
+          },
+        },
+      },
+    },
+  });
+
+  return rows.map((row) => {
+    const products = row.products.map((cp) => mapStorefrontProduct(cp.product));
     return {
       id: row.id,
-      name: row.name,
       slug: row.slug,
+      name: row.name,
       description: row.description,
       imageUrl: row.imageUrl,
-      products: row.products
-        .filter((cp) => cp.product.status === "ACTIVE")
-        .map((cp) => ({
-          id: cp.product.id,
-          name: cp.product.name,
-          slug: cp.product.slug,
-          description: cp.product.description,
-          price: cp.product.price.toString(),
-          compareAt: cp.product.compareAt?.toString() ?? null,
-          currency: cp.product.currency,
-          featured: cp.product.featured,
-          images: cp.product.images.map((img) => ({
-            url: img.url,
-            alt: img.alt,
-          })),
-          variants: cp.product.variants.map((v) => ({
-            id: v.id,
-            sku: v.sku,
-            name: v.name,
-            price: v.price.toString(),
-            inventory: v.inventory,
-          })),
-          createdAt: cp.product.createdAt.toISOString(),
-        })),
-      createdAt: row.createdAt.toISOString(),
+      metaTitle: row.metaTitle,
+      metaDescription: row.metaDescription,
+      productCount: products.length,
+      products,
     };
-  } catch (e) {
-    console.error("[getCollectionBySlug]", e);
-    return null;
-  }
+  });
 }

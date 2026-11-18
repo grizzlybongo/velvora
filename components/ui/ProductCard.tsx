@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
+import { formatPrice } from '@/lib/money'
 import { fadeUp } from '@/lib/utils'
 import type { StorefrontProduct } from '@/lib/db/types'
 
@@ -60,7 +61,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         {/* Info */}
         <div className="space-y-1.5">
           <p className="font-body text-[10px] font-light tracking-label text-muted uppercase">
-            {product.currency}
+            {formatPrice(product.price)}
           </p>
           <h3 className="font-display text-xl font-light tracking-wide text-ink">
             {product.name}

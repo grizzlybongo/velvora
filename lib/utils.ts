@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { formatPrice as formatStorePrice } from '@/lib/money'
 
 /** Merge Tailwind classes without conflicts */
 export function cn(...inputs: ClassValue[]) {
@@ -7,13 +8,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Format price as currency */
-export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price)
+export function formatPrice(price: string | number): string {
+  return formatStorePrice(price)
 }
 
 /** Luxury easing curve */

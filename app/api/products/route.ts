@@ -1,93 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { getProducts } from "@/lib/db";
+import { isValidSlug, parseBool, parseLimit } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
+
+const SUCCESS_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+};
 
 /**
  * GET /api/products
  *
+ * Public read-only endpoint returning ACTIVE products only.
  * Query params:
- *   ?collection=<slug>   — filter by collection slug
- *   ?featured=true       — only featured products
- *   ?status=ACTIVE       — filter by status (default: ACTIVE only)
+ *   ?featured=true|false
+ *   ?collection=<slug>
+ *   ?limit=1..100 (default 24)
  */
 export async function GET(request: NextRequest) {
   try {
-    const prisma = getPrisma();
     const { searchParams } = request.nextUrl;
-    const collectionSlug = searchParams.get("collection");
-    const featured = searchParams.get("featured");
-    const status = searchParams.get("status") ?? "ACTIVE";
 
-    // Validate status
-    const validStatuses = ["DRAFT", "ACTIVE", "ARCHIVED"] as const;
-    if (!validStatuses.includes(status as (typeof validStatuses)[number])) {
+    const featured = parseBool(searchParams.get("featured"));
+    if (featured === "invalid") {
       return NextResponse.json(
-        { error: "Invalid status. Must be DRAFT, ACTIVE, or ARCHIVED." },
+        { error: "Invalid parameter: featured" },
         { status: 400 }
       );
     }
 
-    // Build where clause
-    const where: Record<string, unknown> = {
-      status: status as (typeof validStatuses)[number],
-    };
-
-    if (featured === "true") {
-      where.featured = true;
+    const collectionParam = searchParams.get("collection");
+    if (collectionParam !== null && !isValidSlug(collectionParam)) {
+      return NextResponse.json(
+        { error: "Invalid parameter: collection" },
+        { status: 400 }
+      );
     }
 
-    if (collectionSlug) {
-      where.collections = {
-        some: {
-          collection: { slug: collectionSlug },
-        },
-      };
+    const limit = parseLimit(searchParams.get("limit"));
+    if (limit === "invalid") {
+      return NextResponse.json(
+        { error: "Invalid parameter: limit" },
+        { status: 400 }
+      );
     }
 
-    const products = await prisma.product.findMany({
-      where,
-      include: {
-        images: {
-          orderBy: { sortOrder: "asc" },
-        },
-        variants: {
-          orderBy: { price: "asc" },
-        },
-      },
-      orderBy: { createdAt: "desc" },
+    const products = await getProducts({
+      featured,
+      collectionSlug: collectionParam ?? undefined,
+      limit,
     });
 
-    // Map to public shape (strip internal fields)
-    const result = products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      description: p.description,
-      price: p.price.toString(),
-      compareAt: p.compareAt?.toString() ?? null,
-      currency: p.currency,
-      featured: p.featured,
-      images: p.images.map((img) => ({
-        url: img.url,
-        alt: img.alt,
-      })),
-      variants: p.variants.map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        name: v.name,
-        price: v.price.toString(),
-        inventory: v.inventory,
-      })),
-      createdAt: p.createdAt.toISOString(),
-    }));
-
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("[GET /api/products]", error);
+    return NextResponse.json(products, { headers: SUCCESS_HEADERS });
+  } catch (err) {
+    console.error("[api] /api/products failed", err);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: "Internal error" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }

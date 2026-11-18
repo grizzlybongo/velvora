@@ -1,5 +1,9 @@
 export { getProducts, getProductBySlug } from "./products";
-export { getCollections, getCollectionBySlug } from "./collections";
+export {
+  getCollections,
+  getCollectionBySlug,
+  getHomepageCollections,
+} from "./collections";
 export type {
   StorefrontProduct,
   StorefrontImage,

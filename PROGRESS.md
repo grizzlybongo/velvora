@@ -34,6 +34,9 @@
 - **2026-11-18** — Added `postgre_db_docker_mdp.md` and `*_mdp.md` to `.gitignore` to protect local Docker database credential notes and pushed baseline + schema migration commits to `origin/main` (`https://github.com/grizzlybongo/velvora.git`).
   - Files: `.gitignore`, `PROGRESS.md`
 
+- **2026-11-18** — Hardened public data layer and read-only APIs: added `lib/config/store.ts` (`STORE_CURRENCY = "TND"`, `MONEY_SCALE = 3`, `PRICE_LOCALE = "fr-TN"`), `lib/money.ts` (`formatPrice`), and `lib/validation.ts` (`isValidSlug`, `parseBool`, `parseLimit`). Updated `lib/db/types.ts`, `lib/db/products.ts`, `lib/db/collections.ts`, and `lib/db/index.ts` to use explicit Prisma `select` queries returning only `ACTIVE` products and `visible` collections with derived `inStock`/`lowStock` flags (never exposing raw inventory counts, thresholds, SKUs, statuses, or timestamps) and propagating database errors. Added `getHomepageCollections()` and updated `app/page.tsx` to fetch homepage data in one parallel `Promise.all` without per-collection loops. Updated all 4 API routes (`GET /api/products`, `GET /api/products/[slug]`, `GET /api/collections`, `GET /api/collections/[slug]`) with input validation, `Cache-Control` headers, and safe 500 error responses. Resolved all TypeScript errors from `Product.currency` / `Product.compareAt` removal.
+  - Files: `lib/config/store.ts`, `lib/money.ts`, `lib/validation.ts`, `lib/utils.ts`, `lib/db/types.ts`, `lib/db/products.ts`, `lib/db/collections.ts`, `lib/db/index.ts`, `app/api/products/route.ts`, `app/api/products/[slug]/route.ts`, `app/api/collections/route.ts`, `app/api/collections/[slug]/route.ts`, `app/page.tsx`, `components/home/Products.tsx`, `components/ui/ProductCard.tsx`, `prisma/seed.ts`, `PROGRESS.md`
+
 ---
 
 ## 🔄 In progress

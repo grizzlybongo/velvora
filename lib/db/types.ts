@@ -1,50 +1,53 @@
 /**
  * Shared storefront types derived from the Prisma schema.
- * Used by both data-access functions and UI components.
+ * Used by both public data-access functions and UI components.
  *
- * These are the "public" shapes — no internal fields, prices as strings.
+ * These are the ONLY shapes the storefront and public API may expose.
+ * Never expose: inventory numbers, threshold, status, sku, createdAt/updatedAt,
+ * or internal IDs of join rows.
  */
 
 export type StorefrontImage = {
   url: string;
-  alt: string;
+  alt: string | null;
 };
 
 export type StorefrontVariant = {
   id: string;
-  sku: string;
   name: string;
   price: string;
-  inventory: number;
+  compareAt: string | null;
+  inStock: boolean;
+  lowStock: boolean;
 };
 
 export type StorefrontProduct = {
   id: string;
-  name: string;
   slug: string;
-  description: string | null;
+  name: string;
+  tagline: string | null;
+  family: string | null;
+  scentNotes: string[];
+  description: string;
   price: string;
-  compareAt: string | null;
-  currency: string;
-  featured: boolean;
+  cardColor: string | null;
+  textColor: string | null;
   images: StorefrontImage[];
   variants: StorefrontVariant[];
-  createdAt: string;
+  inStock: boolean;
 };
 
 export type StorefrontCollection = {
   id: string;
-  name: string;
   slug: string;
+  name: string;
   description: string | null;
   imageUrl: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
   productCount: number;
-  createdAt: string;
 };
 
-export type StorefrontCollectionWithProducts = Omit<
-  StorefrontCollection,
-  "productCount"
-> & {
+export type StorefrontCollectionWithProducts = StorefrontCollection & {
   products: StorefrontProduct[];
 };

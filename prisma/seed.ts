@@ -53,7 +53,6 @@ async function main() {
           "A bold, unapologetic composition of oud, black amber, and smoked vanilla. Noir Absolu commands attention with its deep, resonant sillage — a fragrance for those who walk into a room and own it.",
         status: "ACTIVE",
         price: 185.0,
-        currency: "GBP",
         featured: true,
         images: {
           create: [
@@ -80,7 +79,6 @@ async function main() {
           "Where twilight meets skin. A sumptuous blend of iris butter, tonka bean, and cashmere musk that unfolds like the last hour of golden light — warm, intimate, unforgettable.",
         status: "ACTIVE",
         price: 165.0,
-        currency: "GBP",
         featured: true,
         images: {
           create: [
@@ -107,7 +105,6 @@ async function main() {
           "An untamed burst of Amalfi lemon, wild bergamot, and green vetiver, grounded by a white cedar base. Citron Sauvage is bottled sunlight for the free-spirited.",
         status: "ACTIVE",
         price: 140.0,
-        currency: "GBP",
         featured: false,
         images: {
           create: [
@@ -132,7 +129,6 @@ async function main() {
           "A modern rose reinvented — centifolia petals meet saffron threads and dry amber. Neither sweet nor predictable, Rose Immortelle is the floral that refuses to fade.",
         status: "ACTIVE",
         price: 195.0,
-        currency: "GBP",
         featured: true,
         images: {
           create: [
@@ -159,7 +155,6 @@ async function main() {
           "Sacred sandalwood from Mysore, enveloped in creamy coconut milk and a whisper of cardamom. A meditative scent that slows time and deepens every breath.",
         status: "ACTIVE",
         price: 175.0,
-        currency: "GBP",
         featured: false,
         images: {
           create: [
@@ -184,7 +179,6 @@ async function main() {
           "Liquid gold in a bottle — labdanum absolute, benzoin resin, and honeyed tobacco leaf layered over a bed of white musk. A celestial amber that glows long after you've left.",
         status: "DRAFT",
         price: 210.0,
-        currency: "GBP",
         featured: false,
         images: {
           create: [
