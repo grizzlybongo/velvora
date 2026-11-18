@@ -28,6 +28,9 @@
 - **2026-11-17** — Aligned Prisma v7 config (`prisma.config.ts`) to use `env("DATABASE_URL")` from `"prisma/config"`, updated `.gitignore` to track `.env.example` while keeping `.env*` ignored, simplified `.env.example`, and added `db:seed` and `db:status` npm scripts. Verified local PostgreSQL connection via `prisma migrate status`, TypeScript check, and production build.
   - Files: `.gitignore`, `.env.example`, `prisma.config.ts`, `package.json`, `PROGRESS.md`
 
+- **2026-11-18** — Replaced initial 5-model schema with the full 10-model commerce schema (`Product`, `ProductImage`, `Variant`, `Collection`, `CollectionProduct`, `Customer`, `Order`, `OrderItem`, `BlogPost`, `NewsletterSubscriber`) and 5 enums (`ProductStatus`, `OrderType`, `OrderStatus`, `PaymentMethod`, `PostStatus`) at `Decimal(10, 3)` (`MONEY_SCALE = 3` for TND). Created and applied `20261118160847_init` migration with 13 PostgreSQL `CHECK` integrity constraints (non-negative prices/inventory/amounts, slug regex format, `compareAt > price`, normalized lowercase emails) and restarted `Order_orderNumber_seq` at 1001. Regenerated Prisma Client and verified constraint enforcement.
+  - Files: `prisma/schema.prisma`, `prisma/migrations/migration_lock.toml`, `prisma/migrations/20261118160847_init/migration.sql`, `PROGRESS.md`
+
 ---
 
 ## 🔄 In progress
