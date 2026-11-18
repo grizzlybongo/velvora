@@ -31,6 +31,9 @@
 - **2026-11-18** — Replaced initial 5-model schema with the full 10-model commerce schema (`Product`, `ProductImage`, `Variant`, `Collection`, `CollectionProduct`, `Customer`, `Order`, `OrderItem`, `BlogPost`, `NewsletterSubscriber`) and 5 enums (`ProductStatus`, `OrderType`, `OrderStatus`, `PaymentMethod`, `PostStatus`) at `Decimal(10, 3)` (`MONEY_SCALE = 3` for TND). Created and applied `20261118160847_init` migration with 13 PostgreSQL `CHECK` integrity constraints (non-negative prices/inventory/amounts, slug regex format, `compareAt > price`, normalized lowercase emails) and restarted `Order_orderNumber_seq` at 1001. Regenerated Prisma Client and verified constraint enforcement.
   - Files: `prisma/schema.prisma`, `prisma/migrations/migration_lock.toml`, `prisma/migrations/20261118160847_init/migration.sql`, `PROGRESS.md`
 
+- **2026-11-18** — Added `postgre_db_docker_mdp.md` and `*_mdp.md` to `.gitignore` to protect local Docker database credential notes and pushed baseline + schema migration commits to `origin/main` (`https://github.com/grizzlybongo/velvora.git`).
+  - Files: `.gitignore`, `PROGRESS.md`
+
 ---
 
 ## 🔄 In progress
