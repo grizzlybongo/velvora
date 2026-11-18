@@ -1,40 +1,88 @@
 'use client'
 
-import { useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
+import { formatPrice } from '@/lib/money'
 import { fadeUp } from '@/lib/utils'
+import type { StorefrontVariant } from '@/lib/db/types'
 import type { CollectionRow } from './Products'
 
 /* ─────────────────────────────────────────────
-   Product Card — discovery surface, no price
-   Larger, taller cards that command attention
+   Carousel Product Card
    ───────────────────────────────────────────── */
 
 type RowProduct = CollectionRow['products'][number]
 
-function ProductCard({ product }: { product: RowProduct }) {
+function getCarouselPriceSummary(product: RowProduct): {
+  hasMultiplePrices: boolean
+  displayPrice: string
+  compareAtPrice: string | null
+} {
+  if (product.variants.length === 0) {
+    return {
+      hasMultiplePrices: false,
+      displayPrice: formatPrice(product.price),
+      compareAtPrice: null,
+    }
+  }
+
+  let lowestVariant: StorefrontVariant = product.variants[0]
+  const distinctPrices = new Set<number>()
+
+  for (const variant of product.variants) {
+    const numericPrice = Number(variant.price)
+    distinctPrices.add(numericPrice)
+    if (numericPrice < Number(lowestVariant.price)) {
+      lowestVariant = variant
+    }
+  }
+
+  return {
+    hasMultiplePrices: distinctPrices.size > 1,
+    displayPrice: formatPrice(lowestVariant.price),
+    compareAtPrice: lowestVariant.compareAt
+      ? formatPrice(lowestVariant.compareAt)
+      : null,
+  }
+}
+
+function CarouselProductCard({ product }: { product: RowProduct }) {
   const heroImage = product.images[0]
+  const imageAlt =
+    heroImage?.alt && heroImage.alt.trim().length > 0
+      ? heroImage.alt
+      : `${product.name}, ${product.family ?? 'eau de parfum'}`
+
+  const { hasMultiplePrices, displayPrice, compareAtPrice } =
+    getCarouselPriceSummary(product)
 
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="product-card group block shrink-0 snap-start"
+      aria-label={product.name}
+      onFocus={(e) => {
+        e.currentTarget.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest',
+        })
+      }}
+      className="product-card group block shrink-0 snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-4 focus-visible:ring-offset-surface"
       data-cursor="expand"
     >
-      {/* Color block / Image — tall 3:4.5 proportion */}
-      <div className="product-card-block relative overflow-hidden bg-[#f4f2ee]">
+      {/* Fixed 3:4 aspect-ratio block (CLS-safe) */}
+      <div className="product-card-block relative aspect-[3/4] w-full overflow-hidden bg-[#f4f2ee]">
         {heroImage ? (
           <Image
             src={heroImage.url}
-            alt={heroImage.alt || product.name}
+            alt={imageAlt}
             fill
-            sizes="420px"
-            className="object-cover transition-[filter] duration-300 ease-out group-hover:brightness-[1.06]"
+            sizes="(max-width: 640px) 75vw, 25vw"
+            className="object-cover transition-[filter,transform] duration-500 ease-out group-hover:scale-105 group-hover:brightness-[1.06] group-focus-visible:scale-105 group-focus-visible:brightness-[1.06]"
           />
         ) : (
-          /* Placeholder state — name centered on color block */
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
             <span
               className="font-body text-[10px] font-light uppercase"
@@ -49,29 +97,44 @@ function ProductCard({ product }: { product: RowProduct }) {
           </div>
         )}
 
-        {/* Hover brightness overlay */}
-        <div className="pointer-events-none absolute inset-0 transition-[filter] duration-300 group-hover:brightness-[1.06]" />
+        {!product.inStock && (
+          <span className="absolute top-3 left-3 z-10 border border-rule bg-canvas/95 px-3 py-1 font-body text-[10px] font-light tracking-label text-ink uppercase">
+            Sold out
+          </span>
+        )}
       </div>
 
-      {/* Card info — below, open layout with generous spacing */}
-      <div style={{ marginTop: 20 }}>
-        {/* Product name */}
-        <h3
-          className="font-display font-normal transition-colors duration-300"
-          style={{ fontSize: 22, lineHeight: 1.25, color: '#1a1a18', marginBottom: 6 }}
-        >
-          <span className="group-hover:text-[#0e0e0c]">{product.name}</span>
+      {/* Card info */}
+      <div className="mt-5 space-y-1.5">
+        {product.family && (
+          <p className="font-body text-[10px] font-light tracking-label text-muted uppercase">
+            {product.family}
+          </p>
+        )}
+
+        <h3 className="font-display text-[22px] leading-[1.25] font-normal text-[#1a1a18] transition-colors duration-300 group-hover:text-[#0e0e0c] group-focus-visible:text-[#0e0e0c]">
+          {product.name}
         </h3>
 
-        {/* One-line descriptor */}
-        <p
-          className="font-body font-light italic line-clamp-2"
-          style={{ fontSize: 14, lineHeight: 1.5, color: '#8a8a82' }}
-        >
-          {product.description}
-          {/* Underline animation */}
-          <span className="mt-1.5 block h-px w-0 bg-[#8a8a82]/40 transition-all duration-250 ease-out group-hover:w-full" />
+        <p className="font-body text-[14px] leading-[1.5] font-light italic text-[#8a8a82] line-clamp-2">
+          {product.tagline ?? product.description}
         </p>
+
+        <p className="pt-0.5 font-body text-xs font-light tracking-wide text-ink">
+          <span>
+            {hasMultiplePrices ? `From ${displayPrice}` : displayPrice}
+          </span>
+          {compareAtPrice && (
+            <s
+              aria-label="Original price"
+              className="ml-2 font-extralight text-muted/70"
+            >
+              {compareAtPrice}
+            </s>
+          )}
+        </p>
+
+        <span className="mt-1.5 block h-px w-0 bg-[#8a8a82]/40 transition-all duration-250 ease-out group-hover:w-full group-focus-visible:w-full" />
       </div>
     </Link>
   )
@@ -89,11 +152,29 @@ function CollectionRowSection({
   index: number
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(true)
+
+  const updateScrollBounds = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setCanScrollLeft(scrollLeft > 1)
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1)
+  }, [])
+
+  useEffect(() => {
+    updateScrollBounds()
+    window.addEventListener('resize', updateScrollBounds)
+    return () => window.removeEventListener('resize', updateScrollBounds)
+  }, [updateScrollBounds, collection.products.length])
 
   const scroll = (direction: 'left' | 'right') => {
-    if (!scrollRef.current) return
-    const cardWidth = 400 + 24
-    scrollRef.current.scrollBy({
+    const el = scrollRef.current
+    if (!el) return
+    const firstCard = el.querySelector<HTMLElement>('.product-card')
+    const cardWidth = (firstCard?.offsetWidth ?? 340) + 24
+    el.scrollBy({
       left: direction === 'left' ? -cardWidth : cardWidth,
       behavior: 'smooth',
     })
@@ -109,56 +190,46 @@ function CollectionRowSection({
     >
       {/* Subtle chapter-break rule between rows (not on first) */}
       {index > 0 && (
-        <div
-          style={{
-            borderTop: '1px solid rgba(0,0,0,0.05)',
-            marginBottom: 80,
-            marginLeft: 80,
-            marginRight: 80,
-          }}
-        />
+        <div className="mx-5 mb-12 border-t border-black/5 sm:mx-8 md:mb-20 lg:mx-20" />
       )}
 
       {/* Row header */}
-      <div style={{ paddingLeft: 80, paddingRight: 80 }}>
-        <div className="flex items-end justify-between" style={{ marginBottom: 32 }}>
+      <div className="px-5 sm:px-8 lg:px-20">
+        <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <p
-              className="font-body font-light uppercase"
-              style={{
-                fontSize: '10px',
-                letterSpacing: '0.25em',
-                color: '#b8a98a',
-                marginBottom: 10,
-              }}
-            >
+            <p className="mb-2.5 font-body text-[10px] font-light tracking-label text-[#b8a98a] uppercase">
               Collection
             </p>
-            <h3
-              className="font-display font-light tracking-wide text-ink"
-              style={{ fontSize: 28 }}
-            >
+            <h3 className="font-display text-2xl font-light tracking-wide text-ink sm:text-[28px]">
               {collection.name}
             </h3>
           </div>
 
-          {/* Arrows */}
-          <div className="hidden gap-3 md:flex" style={{ marginBottom: 2 }}>
+          {/* Prev/Next controls — min 44×44px hit area, disabled at ends */}
+          <div className="flex shrink-0 gap-2 sm:gap-3">
             <button
+              type="button"
               onClick={() => scroll('left')}
-              className="flex h-10 w-10 items-center justify-center border border-rule transition-colors hover:border-ink"
+              disabled={!canScrollLeft}
+              className="flex h-11 w-11 min-h-11 min-w-11 items-center justify-center border border-rule text-ink transition-colors hover:border-ink focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:pointer-events-none disabled:opacity-30"
               data-cursor="expand"
               aria-label={`Scroll ${collection.name} left`}
             >
-              <span className="font-body text-sm text-ink">←</span>
+              <span className="font-body text-sm" aria-hidden="true">
+                ←
+              </span>
             </button>
             <button
+              type="button"
               onClick={() => scroll('right')}
-              className="flex h-10 w-10 items-center justify-center border border-rule transition-colors hover:border-ink"
+              disabled={!canScrollRight}
+              className="flex h-11 w-11 min-h-11 min-w-11 items-center justify-center border border-rule text-ink transition-colors hover:border-ink focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:pointer-events-none disabled:opacity-30"
               data-cursor="expand"
               aria-label={`Scroll ${collection.name} right`}
             >
-              <span className="font-body text-sm text-ink">→</span>
+              <span className="font-body text-sm" aria-hidden="true">
+                →
+              </span>
             </button>
           </div>
         </div>
@@ -167,19 +238,13 @@ function CollectionRowSection({
       {/* Horizontal scroll track */}
       <div
         ref={scrollRef}
-        className="no-scrollbar flex overflow-x-auto scroll-smooth"
-        style={{
-          scrollSnapType: 'x mandatory',
-          gap: 24,
-          paddingLeft: 80,
-          paddingRight: 80,
-          paddingBottom: 20,
-        }}
+        onScroll={updateScrollBounds}
+        data-lenis-prevent
+        className="no-scrollbar flex snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain scroll-px-5 px-5 pb-5 scroll-smooth sm:scroll-px-8 sm:px-8 lg:scroll-px-20 lg:px-20"
       >
         {collection.products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <CarouselProductCard key={product.id} product={product} />
         ))}
-        <div className="shrink-0" style={{ width: 40 }} />
       </div>
     </motion.div>
   )
@@ -191,7 +256,7 @@ function CollectionRowSection({
 
 function EmptyState() {
   return (
-    <div className="py-24 text-center" style={{ paddingLeft: 80, paddingRight: 80 }}>
+    <div className="px-5 py-24 text-center sm:px-8 lg:px-20">
       <p className="font-display text-2xl font-light italic tracking-wide text-muted">
         New compositions arriving soon.
       </p>
@@ -214,32 +279,20 @@ export default function ProductsClient({
   return (
     <section
       id="products"
-      className="bg-surface"
-      style={{ scrollMarginTop: '80px', paddingTop: 120, paddingBottom: 160 }}
+      className="scroll-mt-20 bg-surface pt-20 pb-28 md:pt-28 md:pb-36 lg:pt-[120px] lg:pb-[160px]"
     >
       {/* Section header */}
-      <div style={{ paddingLeft: 80, paddingRight: 80 }}>
+      <div className="px-5 sm:px-8 lg:px-20">
         <motion.div
           variants={fadeUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-80px' }}
         >
-          <p
-            className="font-body font-light uppercase"
-            style={{
-              fontSize: '10px',
-              letterSpacing: '0.25em',
-              color: '#b8a98a',
-              marginBottom: 16,
-            }}
-          >
+          <p className="mb-4 font-body text-[10px] font-light tracking-label text-[#b8a98a] uppercase">
             The Collection
           </p>
-          <h2
-            className="font-display text-4xl font-light tracking-wide text-ink md:text-5xl"
-            style={{ marginBottom: 0 }}
-          >
+          <h2 className="font-display text-4xl font-light tracking-wide text-ink md:text-5xl">
             Products
           </h2>
         </motion.div>
@@ -249,7 +302,7 @@ export default function ProductsClient({
       {collections.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="flex flex-col" style={{ marginTop: 72, gap: 120 }}>
+        <div className="mt-12 flex flex-col gap-16 md:mt-[72px] md:gap-[120px]">
           {collections.map((col, i) => (
             <CollectionRowSection
               key={col.id}

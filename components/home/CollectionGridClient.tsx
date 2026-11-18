@@ -25,7 +25,7 @@ export default function CollectionGridClient({
 }) {
   return (
     <section id="collections" className="bg-canvas py-section">
-      <div className="mx-auto max-w-360 px-8 lg:px-12">
+      <div className="mx-auto max-w-360 px-5 sm:px-8 lg:px-12">
         {/* Section header */}
         <motion.div
           variants={fadeUp}
@@ -51,7 +51,12 @@ export default function CollectionGridClient({
         ) : (
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {products.map((product, i) => (
-              <ProductCard key={product.id} product={product} index={i} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                index={i}
+                priority={i === 0}
+              />
             ))}
           </div>
         )}
@@ -67,7 +72,7 @@ export default function CollectionGridClient({
           >
             <a
               href="#products"
-              className="inline-block border border-ink px-8 py-3.5 font-body text-[11px] font-light tracking-label text-ink uppercase transition-all duration-500 ease-luxury hover:bg-ink hover:text-surface"
+              className="inline-flex min-h-11 items-center justify-center border border-ink px-8 py-3.5 font-body text-[11px] font-light tracking-label text-ink uppercase transition-all duration-500 ease-luxury hover:bg-ink hover:text-surface focus-visible:bg-ink focus-visible:text-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-4 focus-visible:ring-offset-canvas"
               data-cursor="expand"
             >
               View All Fragrances
